@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MicroPython LED Control</title>
+    <script>
+        function toggleLed() {
+            fetch('/toggle')
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data);
+                    document.getElementById('ledState').innerText = data.led_state;
+                });
+        }
+
+        function updateLedState() {
+            fetch('/led_state')
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data);
+                    document.getElementById('ledState').innerText = data.led_state;
+                });
+        }
+
+        // Update LED state when the page loads
+        updateLedState();
+
+        // Update LED state every 5 seconds
+        setInterval(updateLedState, 5000);
+    </script>
+</head>
+<body>
+    <h1>LED Control</h1>
+    <p>LED State: <span id="ledState">{{LED_STATE}}</span></p>
+    <button onclick="toggleLed()">Toggle LED</button>
+</body>
+</html>
