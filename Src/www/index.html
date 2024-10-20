@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>MicroPython LED Control</title>
+    <title>TerraLight LED Control</title>
     <script>
         function toggleLed() {
             fetch('/toggle')
@@ -26,11 +26,25 @@
 
         // Update LED state every 5 seconds
         setInterval(updateLedState, 5000);
+
+        // Function to set color
+        function setColor(color) {
+            fetch(`/set_color/${color}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log(`Setting color ${color}:`, data);
+                    // Optionally update UI based on response
+                });
+        }
     </script>
 </head>
 <body>
     <h1>LED Control</h1>
     <p>LED State: <span id="ledState">{{LED_STATE}}</span></p>
     <button onclick="toggleLed()">Toggle LED</button>
+    <br><br>
+    <button onclick="setColor('space')">Set Color Space</button>
+    <button onclick="setColor('forest')">Set Color Forest</button>
+    <button onclick="setColor('sunset')">Set Color Sunset</button>
 </body>
 </html>
