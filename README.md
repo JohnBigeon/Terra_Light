@@ -6,7 +6,7 @@ Remote access to a neopixel strip via micropython and web servers.
 ## Visuals
 The main device looks like:
 <div>
-  <img src="Screenshots_and_Pictures/integration_v01.bmp" alt="TerraLight." width="800" />
+  <img src="Screenshots_and_Pictures/integration_v01.jpg" alt="TerraLight." width="800" />
 </div>
 
 ## Hardware
@@ -16,6 +16,11 @@ The schematic and pcb design has been designed via KiCad:
   <img src="KiCad_files/schematic_terra_light.png" alt="Schematic." width="500" />
   <img src="KiCad_files/pcb_3D.png" alt="PCB." width="500" />
 </div>
+
+
+## Software
+Update the key in 'env.txt' with the correct parameters.
+Then rename the 'env.txt' file to '.env' file.
 
 
 ## Roadmap
