@@ -45,11 +45,11 @@ def query_wifi_params(ssid, password):
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
     wlan.connect(wifi_credentials_ssid, wifi_credentials_password)
-
+    
     # Wait until the connection is established
     while not wlan.isconnected():
         pass
-
+       
     print("Connected to Wi-Fi")
     print("IP Address:", wlan.ifconfig()[0])
     print("Subnet Mask:", wlan.ifconfig()[1])
@@ -59,6 +59,7 @@ def query_wifi_params(ssid, password):
 # Configure the ESP32 wifi
 def connect_wifi(wifi_credentials_ssid, wifi_credentials_password, static_ip):
     sta = network.WLAN(network.STA_IF)
+    time.sleep(1)
     if not sta.isconnected():
         print('Connecting to network...')
         sta.active(True)
@@ -88,12 +89,12 @@ def toggle_led(color):
     print(led.value())
     print(f'color selected: {color}')
     color_val = setColor(color)
-
-    if led.value() == 0:
+    
+    if led.value() == 0: 
         for ii in range(n):
             np[ii] = color_val
         np.write()
-
+        
     else:
         for ii in range(n):
             np[ii] = (0, 0, 0)
@@ -106,8 +107,8 @@ def toggle_led(color):
 # Endpoint to get the LED state
 def get_led_state():
     return {"led_state": led.value()}
-
-
+    
+  
 def setColor(color='forest'):
     if color == 'space':
         out = (79, 23, 135)
@@ -116,7 +117,7 @@ def setColor(color='forest'):
     else: # If not correct msg, go forest colors
         out = (120, 153, 23)
     return out
-
+    
 ###############################################
 ### Read HTML content from file
 ###############################################
@@ -126,59 +127,99 @@ def read_html_content():
             return file.read()
     except OSError:
         return "Error: Could not read HTML file"
-
+    
     # Wait for a short time to avoid timing issues
     time.sleep(0.1)
-
+    
     new_state = not led.value()
     led.value(new_state)
-
+    
     print("New LED state:", led.value())
-
+    
     return {"status": "success", "led_state": led.value()} #random.random()}#
 
-# Function to handle incoming requests
 def handle_request(conn, request):
-    # Check for "/toggle" in the request and call toggle_led
-    if b"GET /toggle" in request:
+    if not request:
+        return
+
+    try:
+        request_str = request.decode('utf-8')
+    except Exception:
+        request_str = ""
+
+    # --- Route : TOGGLE ---
+    if "GET /toggle" in request_str:
         print(21*'#')
-        response = toggle_led(setColor())  # toggle with default color
-        print(response)
-        conn.sendall("HTTP/1.1 200 OK\nContent-Type: application/json\nConnection: close\n" +
-                     "Cache-Control: no-store\n\n" + str(response))
+        response = toggle_led(setColor())  # toggle
+        print("Toggle response:", response)
+        
+        json_data = json.dumps(response)
+        header = (
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: application/json\r\n"
+            "Connection: close\r\n"
+            "Cache-Control: no-store\r\n"
+            "\r\n"
+        )
+        conn.sendall(header + json_data)
 
-    # Check for "/set_color" in the request and call setColor with specific color
-    elif b"GET /set_color/" in request:
-        # Extract the color from the URL
-        request_str = request.decode()  # Decode the byte request to string
-        color = request_str.split("/set_color/")[1].split(" ")[0]  # Extract the color from URL
-        print("Requested color:", color)
+    # --- Route : SET_COLOR ---
+    elif "GET /set_color/" in request_str:
+        # Get color
+        try:
+            color = request_str.split("/set_color/")[1].split(" ")[0]
+            print("Requested color:", color)
+            
+            color_value = setColor(color)
+            response = {"status": "success", "color_set": color, "color_value": color_value}
+            toggle_led(color)
+        except Exception as e:
+            response = {"status": "error", "message": str(e)}
 
-        # Call setColor with the extracted color
-        color_value = setColor(color)
-        response = {"status": "success", "color_set": color, "color_value": color_value}
-        toggle_led(color)
+        json_data = json.dumps(response)
+        header = (
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: application/json\r\n"
+            "Connection: close\r\n"
+            "Cache-Control: no-store\r\n"
+            "\r\n"
+        )
+        conn.sendall(header + json_data)
 
-        # Send the response back
-        conn.sendall("HTTP/1.1 200 OK\nContent-Type: application/json\nConnection: close\n" +
-                     "Cache-Control: no-store\n\n" + str(response))
-
-    elif b"GET /led_state" in request:
+    # --- Route : LED_STATE ---
+    elif "GET /led_state" in request_str:
         print(21*'#')
-        print('Request of the status')
+        print('Requesting status...')
         response = get_led_state()
-        #print(response)
-        conn.sendall("HTTP/1.1 200 OK\nContent-Type: application/json\nConnection: close\n" +
-                     "Cache-Control: no-store\n\n" + json.dumps(response))  # Ensure the response is JSON-formatted
+        
+        json_data = json.dumps(response)
+        header = (
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: application/json\r\n"
+            "Connection: close\r\n"
+            "Cache-Control: no-store\r\n"
+            "\r\n"
+        )
+        conn.sendall(header + json_data)
+
+    # --- Route default : INDEX HTML ---
     else:
         print(21*'#')
-        print('Connection')
+        print('Serving Index Page')
         html_content = read_html_content()
-        led_state = led.value()  # Change this to led.value() when you're ready to use the actual LED state
+        
+        # Injection of the LED state into the HTML
+        led_state = led.value()
         html_content = html_content.replace('{{LED_STATE}}', str(led_state))
-        conn.sendall("HTTP/1.1 200 OK\nContent-Type: text/html\nConnection: close\n" +
-                     "Cache-Control: no-store\n\n" + html_content)
-
+        
+        header = (
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: text/html\r\n"
+            "Connection: close\r\n"
+            "Cache-Control: no-store\r\n"
+            "\r\n"
+        )
+        conn.sendall(header + html_content)
 
 ###############################################
 ### Dot-env method for micropython
@@ -208,17 +249,25 @@ def load_dotenv(filename=".env"):
 def web_server():
     addr = socket.getaddrinfo('0.0.0.0', 80)[0][-1]
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) # Réutiliser l'adresse immédiatement après reboot
     s.bind(addr)
-    s.listen(1)
+    s.listen(5) # Augmenter la file d'attente
     print("Listening on", addr)
 
     while True:
-        conn, addr = s.accept()
-        print("Connection from:", addr)
-        request = conn.recv(1024)
-        handle_request(conn, request)
-        conn.close()
-
+        conn = None
+        try:
+            conn, addr = s.accept()
+            conn.settimeout(2.0) # Évite de rester bloqué si le client n'envoie rien
+            print("Connection from:", addr)
+            request = conn.recv(1024)
+            if request:
+                handle_request(conn, request)
+        except Exception as e:
+            print("Erreur lors de la requête:", e)
+        finally:
+            if conn:
+                conn.close() # GARANTIT que la socket est libérée, même en cas d'erreur
 
 ###############################################
 ### Set the time using NTP
@@ -242,7 +291,7 @@ def update_timus():
 if __name__ == "__main__":
     # Use the onboard led to keep track of the Neopixel led
     led = machine.Pin(2, machine.Pin.OUT)
-
+    
     # LED ring
     n = 15
     p = 12
@@ -250,6 +299,7 @@ if __name__ == "__main__":
 
     # Get passwords via dotenv method
     env = load_dotenv()
+    print(env)  # This will print out the dictionary of environment variables
 
     # WiFi settings
     wifi_credentials_ssid = env.get("wifi_credentials_ssid")
@@ -258,7 +308,7 @@ if __name__ == "__main__":
     static_ip = tuple(static_ip_str.split(','))
 
     wifi_ok = connect_wifi(wifi_credentials_ssid, wifi_credentials_password, static_ip)
-
+    
     if wifi_ok:
         update_timus()
         web_server()
