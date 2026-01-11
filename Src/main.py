@@ -70,16 +70,16 @@ def connect_wifi(wifi_credentials_ssid, wifi_credentials_password, static_ip):
             time.sleep(1)
             pass
 
-        if sta.isconnected():
-            print('Connected to network')
-            # Configure the static IP address
-            sta.ifconfig(static_ip)
-            params_used = 'network config: %s' % str(sta.ifconfig())
-            print(params_used)
-            return True
-        else:
-            print('Failed to connect to network')
-            return False
+    if sta.isconnected():
+        print('Connected to network')
+        # Configure the static IP address
+        sta.ifconfig(static_ip)
+        params_used = 'network config: %s' % str(sta.ifconfig())
+        print(params_used)
+        return True
+    else:
+        print('Failed to connect to network')
+        return False
 
 ###############################################
 ### LED function
